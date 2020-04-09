@@ -1,0 +1,18 @@
+---
+title: "Power Calculations for ACEi/ARB analyses"
+author: "Anna Schultze"
+date: "09/04/2020"
+output: html_document
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(gt)
+library(epiR)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
