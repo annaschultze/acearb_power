@@ -1,7 +1,7 @@
 ---
-title: "Power Calculations for ACEi/ARB analyses"
+title: "Power Calculations for Covid-19 Drug analyses"
 author: "Anna Schultze"
-date: "09/04/2020"
+date: "15/04/2020"
 output: html_document
 editor_options:
   chunk_output_type: console
@@ -9,10 +9,116 @@ editor_options:
 
 ```{r setup, include=FALSE}
 
-library(tidyverse)
-library(gt)
-library(epiR)
-
+library(rmarkdown)
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
+
+## Introduction 
+
+This document summarises the power calculations done for the analyses of drug effects as part of the Open Corona Collaborative Project. Power calculations were considered particularly important for the evaluations of drug effects, to allow the analyses to only be run when sufficient power to detect a clinically important effect was present. This minimizes the risk of reporting spurious findings or reporting the results from underpowered studies that cannot conclusively answer the research questions. 
+
+Power calculations for the case-control studies were conducted in R using the following packages: 
+
+```{r dependencies, , results = 'hide', message = FALSE, warning = FALSE}
+
+library(tidyverse)
+library(epiR)
+library(gt)
+
+```
+
+## Case-control 
+
+This uses the epi.sscc function from the epiR package, which implements power calculations described by Dupont (1988). 
+
+These were solved to show a range of required sample sizes given a range of, expected odds ratios and prevalencee estimates. For simplicity, I assumed the exposure variables were binary in nature. (*Internal note - not sure this is technichally correct, or what the power implication of having a categorical exposure variable is*). I also decided to fix the power at 80% because this was considered the minimum required to execute the studies; this would therefore show the minimum number of cases needed given a certain exposure prevalence. 
+
+The case-control studies will be matched on GP practice. Matching tends to lead to a correlation of the exposure between cases and controls, if the matching variable at least in part is an important determinant of the exposure (*Internal note - not sure on this, please confirm*). The matching in our study is implemented primarily for pragmatic reasons and it is not anticipated that GP practice would have a large effect on the type of antiyhpertensive treatment prescribed. 
+
+Nonetheless, we decided to fix the correlation to 0.2 as no published data was available, following the advice of Dupont (1988). This was considered a conservative estimate. 
+The fixed inputs were therefore: 
+
+***
+
+  *alhpa = 0.05*
+  *power = 0.8* 
+  *two-sided test = TRUE* 
+  *method = matched* 
+  *fleiss correction = FALSE* 
+  *case-control ratio = 5*
+  *correlation = 0.2*
+
+***
+
+The inputs that were considered valuable to vary were therefore exposure prevalence and effect size, as there was uncertainty about what was (a) a clinically plausible and relevant effect size and (b) what a plausible exposure prevalence was. The exposure prevalence should reflect the 
+
+```{r inputs}
+
+# Create the inputs  
+INPUT_OR <- seq(1.1, 3, by = 0.2)
+INPUT_PREVALENCE <- seq(0.1, 0.9, by = 0.1)
+
+# Expanding because I'll apply the function rowwise later on - keen to know if there's a different (better) way...
+INPUTS <- expand.grid(INPUT_OR, INPUT_PREVALENCE) %>% 
+          rename(ODDS = Var1, PREV = Var2)
+
+```
+
+The prewritten function was applied to all of the inputs as indicated below. 
+
+
+```{r echo = FALSE}
+
+# Putting the sampsize formula in a function which allows me to vary some inputs automatically; solving for N
+
+cc_func <- function(ODDS, PREV) { 
+    
+    epi.sscc(OR = ODDS, p0 = PREV, n = NA, power = 0.8, r = 5, rho = 0.2,
+             design = 1, sided.test = 2, conf.level = 0.95, method = "matched",
+             fleiss = FALSE)
+  
+}
+
+
+# Apply function to input 
+
+out <- as_tibble(INPUTS) %>%  
+       mutate(sampout = pmap((list(ODDS = ODDS, PREV = PREV)), cc_func)) %>% 
+       unnest_wider(sampout) %>%  
+       select(ODDS, PREV, n.total, n.case)
+
+out
+
+# 1.5 mentioned as the effectsize that, if this was missed, we'd miss a clinically potentially important effect. Create a dataset with only those estimates. 
+
+out_small <- out %>% 
+             filter(ODDS == 1.5) %>% 
+             rowid_to_column() %>% 
+             mutate(as.character(rowid)) %>% 
+             mutate(row = str_c("row_",rowid)) %>% 
+             select(PREV, n.total, n.case, row)
+
+rowid_to_column(out_small)
+
+```
+
+I'd like to display this tibble as a nice table, so I decided to experiment with the new R package "gt", which should allow me to create this. 
+
+I decided against showing plots, because I don't think they're as informative - we know that power increases with number of cases, what we'd like to know now I think is how many cases do we need at a minimum to be able to run this analysis which I think is easier read from a table. Perhaps I'll be able to add some nice colours to the table. 
+
+
+```{r makenicetable}
+
+out_small %>% gt(rowname_col = "row" 
+                 ) 
+
+```
+
+
+
+
+
+
+
 
