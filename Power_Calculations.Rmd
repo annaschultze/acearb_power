@@ -25,14 +25,12 @@ Power calculations for the case-control studies were conducted in R using the fo
 library(tidyverse)
 library(epiR)
 library(gt)
-
+library(rvest)
 ```
 
-## Case-control 
+## Case-control Studies 
 
-This uses the epi.sscc function from the epiR package, which implements power calculations described by Dupont (1988). 
-
-These were solved to show a range of required sample sizes given a range of, expected odds ratios and prevalencee estimates. For simplicity, I assumed the exposure variables were binary in nature. (*Internal note - not sure this is technichally correct, or what the power implication of having a categorical exposure variable is*). I also decided to fix the power at 80% because this was considered the minimum required to execute the studies; this would therefore show the minimum number of cases needed given a certain exposure prevalence. 
+This uses the epi.sscc function from the epiR package, which implements power calculations as described by Dupont (1988). For simplicity, I assumed the exposure variables were binary in nature. (*Internal note - not sure this is technichally correct, or what the power implication of having a categorical exposure variable is*). I also decided to fix the power at 80% because this was considered the minimum required to execute the studies; this would therefore show the minimum number of cases needed given a certain exposure prevalence. 
 
 The case-control studies will be matched on GP practice. Matching tends to lead to a correlation of the exposure between cases and controls, if the matching variable at least in part is an important determinant of the exposure (*Internal note - not sure on this, please confirm*). The matching in our study is implemented primarily for pragmatic reasons and it is not anticipated that GP practice would have a large effect on the type of antiyhpertensive treatment prescribed. 
 
@@ -41,17 +39,19 @@ The fixed inputs were therefore:
 
 ***
 
-  *alhpa = 0.05*
-  *power = 0.8* 
-  *two-sided test = TRUE* 
-  *method = matched* 
-  *fleiss correction = FALSE* 
-  *case-control ratio = 5*
-  *correlation = 0.2*
+  * *alhpa = 0.05*
+  * *power = 0.8* 
+  * *two-sided test = TRUE* 
+  * *method = matched* 
+  * *fleiss correction = FALSE* 
+  * *case-control ratio = 5*
+  * *correlation = 0.2*
 
 ***
 
-The inputs that were considered valuable to vary were therefore exposure prevalence and effect size, as there was uncertainty about what was (a) a clinically plausible and relevant effect size and (b) what a plausible exposure prevalence was. The exposure prevalence should reflect the 
+The inputs that were considered valuable to vary were exposure prevalence and effect size, as there was uncertainty about what was (a) a clinically plausible and relevant effect size and (b) what a plausible exposure prevalence was. The exposure prevalence should reflect the 
+
+The following ranges were created: 
 
 ```{r inputs}
 
@@ -68,7 +68,7 @@ INPUTS <- expand.grid(INPUT_OR, INPUT_PREVALENCE) %>%
 The prewritten function was applied to all of the inputs as indicated below. 
 
 
-```{r echo = FALSE}
+```{r function}
 
 # Putting the sampsize formula in a function which allows me to vary some inputs automatically; solving for N
 
@@ -88,35 +88,42 @@ out <- as_tibble(INPUTS) %>%
        unnest_wider(sampout) %>%  
        select(ODDS, PREV, n.total, n.case)
 
-out
+```
 
-# 1.5 mentioned as the effectsize that, if this was missed, we'd miss a clinically potentially important effect. Create a dataset with only those estimates. 
+I'd like to display this tibble as a nice table, so I decided to experiment with the new R package "gt", which should allow me to create this. To do this I think I'd like the prevalence estimates all in columns and the odds in rows. 
+For simplicity displaying only number of cases as number of controls is not anticipated to be a rate-limiting step in any analyses. 
 
-out_small <- out %>% 
-             filter(ODDS == 1.5) %>% 
-             rowid_to_column() %>% 
-             mutate(as.character(rowid)) %>% 
-             mutate(row = str_c("row_",rowid)) %>% 
-             select(PREV, n.total, n.case, row)
-
-rowid_to_column(out_small)
+```{r reshape}
+out <- out %>% 
+        select(PREV, ODDS, n.case) %>% 
+        pivot_wider(names_from = "PREV", values_from = "n.case") %>% 
+        rename_at(vars(contains('n.case_')), funs(sub('n.case_', '', .)))
 
 ```
 
-I'd like to display this tibble as a nice table, so I decided to experiment with the new R package "gt", which should allow me to create this. 
 
-I decided against showing plots, because I don't think they're as informative - we know that power increases with number of cases, what we'd like to know now I think is how many cases do we need at a minimum to be able to run this analysis which I think is easier read from a table. Perhaps I'll be able to add some nice colours to the table. 
+The below code formats and prints the table. 
 
 
 ```{r makenicetable}
 
-out_small %>% gt(rowname_col = "row" 
-                 ) 
+table <- out %>% 
+         gt(rowname_col = "ODDS") %>% 
+         tab_stubhead(label = "Odds Ratio") %>% 
+         tab_spanner(label = "Prevalence of the Exposure among Controls", 
+                     columns = vars("0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9")
+                     ) %>% 
+         tab_header(title = "Number of Cases Required to Detect a Given Odds Ratio for a Given Prevalence", 
+                    subtitle = "Assuming 80% Power and an Alpha of 0.05 and a Matching Ratio of 1:5")
+                 
+table
 
 ```
 
 
+## Comparison to existing number of cases 
 
+What's of interest is to compare this to the number of cases that exist, which on `Sys.Date()` was 
 
 
 
