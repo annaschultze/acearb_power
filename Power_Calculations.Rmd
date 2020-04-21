@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction 
 
-This document summarises the power calculations done for the analyses of drug effects as part of the Open Corona Collaborative Project. Power calculations were considered particularly important for the evaluations of drug effects, to allow the analyses to only be run when sufficient power to detect a clinically important effect was present. This minimizes the risk of reporting spurious findings or reporting the results from underpowered studies that cannot conclusively answer the research questions. You can view the source code for this here: 
+This document summarises the power calculations done for the analyses of drug effects as part of the Open Corona Collaborative Project. Power calculations were considered particularly important for the evaluations of drug effects, to allow the analyses to only be run when sufficient power to detect a clinically important effect was present. This minimizes the risk of reporting spurious findings or reporting the results from underpowered studies that cannot conclusively answer the research questions. You can view the source code for this here: https://github.com/annaschultze/acearb_power
 
 Power calculations for the case-control studies were conducted in R using the following packages: 
 
@@ -119,14 +119,6 @@ The results are shown below.
 table
 ```
 
-
-## Comparison to existing number of cases 
-
-What's of interest is to compare this to the number of cases that exist. To do this I looked at deaths - the least prevalent outcome - which I took from here: https://coronavirus.data.gov.uk/. 
-
-On the 21st of April there were 14,828 deaths in England. Approximately 44% of the English population are covered by TPP practices, meaning that there may be as many as 6,524 deaths captured among TPP patients. With over 6,000 deaths we would be well powered to detect an association of 1.3 or greater, irrespective of the exposure prevalence among the controls. 
-
-The analyses were therefore considered to be well-powered to detect a clinically relevant effect. 
 
 ## Potential Improvements
 
