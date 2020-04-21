@@ -2,7 +2,9 @@
 title: "Power Calculations for Covid-19 Drug analyses"
 author: "Anna Schultze"
 date: "15/04/2020"
-output: html_document
+output:
+  html_document: default
+  word_document: default
 editor_options:
   chunk_output_type: console
 ---
@@ -16,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction 
 
-This document summarises the power calculations done for the analyses of drug effects as part of the Open Corona Collaborative Project. Power calculations were considered particularly important for the evaluations of drug effects, to allow the analyses to only be run when sufficient power to detect a clinically important effect was present. This minimizes the risk of reporting spurious findings or reporting the results from underpowered studies that cannot conclusively answer the research questions. 
+This document summarises the power calculations done for the analyses of drug effects as part of the Open Corona Collaborative Project. Power calculations were considered particularly important for the evaluations of drug effects, to allow the analyses to only be run when sufficient power to detect a clinically important effect was present. This minimizes the risk of reporting spurious findings or reporting the results from underpowered studies that cannot conclusively answer the research questions. You can view the source code for this here: 
 
 Power calculations for the case-control studies were conducted in R using the following packages: 
 
@@ -25,14 +27,14 @@ Power calculations for the case-control studies were conducted in R using the fo
 library(tidyverse)
 library(epiR)
 library(gt)
-library(rvest)
+
 ```
 
 ## Case-control Studies 
 
 This uses the epi.sscc function from the epiR package, which implements power calculations as described by Dupont (1988). For simplicity, I assumed the exposure variables were binary in nature. (*Internal note - not sure this is technichally correct, or what the power implication of having a categorical exposure variable is*). I also decided to fix the power at 80% because this was considered the minimum required to execute the studies; this would therefore show the minimum number of cases needed given a certain exposure prevalence. 
 
-The case-control studies will be matched on GP practice. Matching tends to lead to a correlation of the exposure between cases and controls, if the matching variable at least in part is an important determinant of the exposure (*Internal note - not sure on this, please confirm*). The matching in our study is implemented primarily for pragmatic reasons and it is not anticipated that GP practice would have a large effect on the type of antiyhpertensive treatment prescribed. 
+The case-control studies will be matched on GP practice. Matching tends to lead to a correlation of the exposure between cases and controls, if the matching variable at least in part is an important determinant of the exposure (*Internal note - not sure about the specific rationale for the correlation, please confirm*). The matching in our study is implemented primarily for pragmatic reasons and it is not anticipated that GP practice would have a large effect on the type of antiyhpertensive treatment prescribed. 
 
 Nonetheless, we decided to fix the correlation to 0.2 as no published data was available, following the advice of Dupont (1988). This was considered a conservative estimate. 
 The fixed inputs were therefore: 
@@ -49,11 +51,9 @@ The fixed inputs were therefore:
 
 ***
 
-The inputs that were considered valuable to vary were exposure prevalence and effect size, as there was uncertainty about what was (a) a clinically plausible and relevant effect size and (b) what a plausible exposure prevalence was. The exposure prevalence should reflect the 
+The inputs that were considered valuable to vary were exposure prevalence and effect size, as there was uncertainty about what was (a) a clinically plausible and relevant effect size and (b) what a plausible exposure prevalence was. 
 
-The following ranges were created: 
-
-```{r inputs}
+```{r inputs, echo = FALSE}
 
 # Create the inputs  
 INPUT_OR <- seq(1.1, 3, by = 0.2)
@@ -90,10 +90,9 @@ out <- as_tibble(INPUTS) %>%
 
 ```
 
-I'd like to display this tibble as a nice table, so I decided to experiment with the new R package "gt", which should allow me to create this. To do this I think I'd like the prevalence estimates all in columns and the odds in rows. 
-For simplicity displaying only number of cases as number of controls is not anticipated to be a rate-limiting step in any analyses. 
+I'd like to display this tibble as a nice table, so I decided to experiment with the new R package "gt", which should allow me to create this. For simplicity I'm displaying only number of cases as number of controls is not anticipated to be a rate-limiting step in any analyses. 
 
-```{r reshape}
+```{r reshape, echo = FALSE, warning = FALSE}
 out <- out %>% 
         select(PREV, ODDS, n.case) %>% 
         pivot_wider(names_from = "PREV", values_from = "n.case") %>% 
@@ -102,10 +101,7 @@ out <- out %>%
 ```
 
 
-The below code formats and prints the table. 
-
-
-```{r makenicetable}
+```{r makenicetable, echo = FALSE, warning = FALSE}
 
 table <- out %>% 
          gt(rowname_col = "ODDS") %>% 
@@ -113,17 +109,40 @@ table <- out %>%
          tab_spanner(label = "Prevalence of the Exposure among Controls", 
                      columns = vars("0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9")
                      ) %>% 
-         tab_header(title = "Number of Cases Required to Detect a Given Odds Ratio for a Given Prevalence", 
-                    subtitle = "Assuming 80% Power and an Alpha of 0.05 and a Matching Ratio of 1:5")
-                 
-table
+         tab_header(title = "Number of Cases Required to Detect a Given Odds Ratio for a Given Prevalence") 
 
+```
+
+The results are shown below. 
+
+```{r results, echo = FALSE}
+table
 ```
 
 
 ## Comparison to existing number of cases 
 
-What's of interest is to compare this to the number of cases that exist, which on `Sys.Date()` was 
+What's of interest is to compare this to the number of cases that exist. To do this I looked at deaths - the least prevalent outcome - which I took from here: https://coronavirus.data.gov.uk/. 
+
+On the 21st of April there were 14,828 deaths in England. Approximately 44% of the English population are covered by TPP practices, meaning that there may be as many as 6,524 deaths captured among TPP patients. With over 6,000 deaths we would be well powered to detect an association of 1.3 or greater, irrespective of the exposure prevalence among the controls. 
+
+The analyses were therefore considered to be well-powered to detect a clinically relevant effect. 
+
+## Potential Improvements
+
+These power calculations could be improved, specifically it might be useful to: 
+
+* Explore the impact of a categorical exposure rather than binary 
+* Explore the impact of a stronger (or less strong) exposure correlation coefficient
+* Plot this in graphs to understand the shape of the power curves 
+* Scrape the number of deaths automatically for this to update on each run 
+
+
+
+
+
+
+
 
 
 
